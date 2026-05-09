@@ -1,0 +1,63 @@
+name: Poll tee times
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: poll-tee-times
+  cancel-in-progress: false
+
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install Python deps
+        run: pip install -r requirements.txt
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-chromium-v1
+
+      - name: Install Playwright Chromium
+        run: python -m playwright install --with-deps chromium
+
+      - name: Run monitor
+        env:
+          ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
+          ALERT_EMAIL_PASSWORD: ${{ secrets.ALERT_EMAIL_PASSWORD }}
+          ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
+        run: python tee_time_monitor.py
+
+      - name: Commit updated cache
+        run: |
+          if [ -n "$(git status --porcelain cache/)" ]; then
+            git config user.name "tee-time-bot"
+            git config user.email "actions@users.noreply.github.com"
+            git add cache/
+            git commit -m "update alerted-times cache [skip ci]"
+            # Pull-rebase in case another run committed since checkout, then push.
+            for i in 1 2 3; do
+              git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && \
+                git push origin "HEAD:${GITHUB_REF_NAME}" && break
+              echo "push failed, retrying ($i)"
+              sleep 2
+            done
+          else
+            echo "no cache changes"
+          fi
