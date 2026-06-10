@@ -1,0 +1,37 @@
+{
+  "_help": "Edit the 'watches' list below to change what's monitored. Don't touch 'courses' unless you're adding a new course (you'd need to know its booking IDs).",
+
+  "courses": {
+    "Baylands Golf Links": {
+      "platform": "golfnow",
+      "facility_id": 9259,
+      "lat": 37.44936,
+      "lon": -122.12526
+    },
+    "Poppy Ridge": {
+      "platform": "foreup",
+      "course_id": 20938,
+      "schedule_id": 11715,
+      "booking_class": 50613
+    }
+  },
+
+  "watches": [
+    {
+      "course": "Baylands Golf Links",
+      "date": "2026-05-16",
+      "time_start": "06:00",
+      "time_end": "12:00",
+      "players": 4,
+      "max_price": 120
+    },
+    {
+      "course": "Poppy Ridge",
+      "date": "2026-05-16",
+      "time_start": "06:00",
+      "time_end": "12:00",
+      "players": 4,
+      "max_price": 0
+    }
+  ]
+}

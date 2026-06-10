@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "*/5 * * * *"
   workflow_dispatch:
+    inputs:
+      test_email:
+        description: "Send a test email instead of checking tee times"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -42,7 +47,12 @@ jobs:
           ALERT_EMAIL_FROM: ${{ secrets.ALERT_EMAIL_FROM }}
           ALERT_EMAIL_PASSWORD: ${{ secrets.ALERT_EMAIL_PASSWORD }}
           ALERT_EMAIL_TO: ${{ secrets.ALERT_EMAIL_TO }}
-        run: python tee_time_monitor.py
+        run: |
+          if [ "${{ github.event.inputs.test_email }}" = "true" ]; then
+            python tee_time_monitor.py --test-email
+          else
+            python tee_time_monitor.py
+          fi
 
       - name: Commit updated cache
         run: |

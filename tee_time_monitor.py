@@ -19,36 +19,21 @@ import requests
 
 REPO_ROOT = Path(__file__).resolve().parent
 CACHE_FILE = REPO_ROOT / "cache" / "alerted.json"
+WATCHES_FILE = REPO_ROOT / "watches.json"
 
-WATCHES = [
-    {
-        "course": "Baylands Golf Links",
-        "platform": "golfnow",
-        "facility_id": 9259,
-        "lat": 37.44936,
-        "lon": -122.12526,
-        "date": "2026-05-16",
-        "time_start": "06:00",
-        "time_end": "12:00",
-        "players": 4,
-        "max_price": 120,
-    },
-    {
-        "course": "Poppy Ridge",
-        "platform": "foreup",
-        "course_id": 20938,
-        "schedule_id": 11715,
-        "booking_class": 50613,
-        "date": "2026-05-16",
-        "time_start": "06:00",
-        "time_end": "12:00",
-        "players": 4,
-        "max_price": 0,
-    },
-    # Poppy Hills is intentionally not included: ForeUp booking classes for
-    # Poppy Hills are NCGA member-only (online_booking_protected=1). A reliable
-    # poller requires NCGA member credentials. Add it back once we have those.
-]
+
+def load_watches():
+    """Merge per-watch overrides on top of the course's technical config."""
+    config = json.loads(WATCHES_FILE.read_text())
+    courses = config["courses"]
+    merged = []
+    for w in config["watches"]:
+        course_cfg = courses.get(w["course"])
+        if not course_cfg:
+            print(f"  [skip] unknown course in watches.json: {w['course']!r}")
+            continue
+        merged.append({**course_cfg, **w})
+    return merged
 
 ALERT_FROM = os.getenv("ALERT_EMAIL_FROM", "")
 ALERT_PASSWORD = os.getenv("ALERT_EMAIL_PASSWORD", "")
@@ -262,7 +247,7 @@ def check_all():
     cache = prune_cache(load_cache())
     new_finds = []
 
-    for watch in WATCHES:
+    for watch in load_watches():
         ts = datetime.now().strftime("%H:%M:%S")
         print(f"[{ts}] {watch['course']} on {watch['date']} ({watch['players']}p, {watch['time_start']}–{watch['time_end']})")
         try:
@@ -304,4 +289,11 @@ def check_all():
 
 
 if __name__ == "__main__":
-    check_all()
+    if "--test-email" in sys.argv:
+        send_alert(
+            "⛳ Tee time bot — test email",
+            "This is a test from your tee time bot. If you're reading this, "
+            "email alerts are working correctly.",
+        )
+    else:
+        check_all()

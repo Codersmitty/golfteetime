@@ -2,10 +2,34 @@
 
 Polls Baylands Golf Links (via GolfNow) and Poppy Ridge (via ForeUp) every
 5 minutes for available tee times matching the criteria in
-`tee_time_monitor.py`, and emails when a new slot opens.
+[`watches.json`](./watches.json), and emails when a new slot opens.
 
-Schedules and filters are defined in the `WATCHES` list at the top of
-`tee_time_monitor.py`. Edit it and commit to change what's monitored.
+## Control panel (web UI)
+
+A point-and-click control panel lives at:
+
+**https://codersmitty.github.io/golfteetime/**
+
+From there you can edit watches, turn the bot on/off, trigger a run, and send a
+test email — from any phone or computer. It's served by GitHub Pages from the
+[`docs/`](./docs) folder. The first time you use it, you paste a GitHub token
+(saved only in your browser) so it can write changes back to this repo.
+
+## Changing what's monitored
+
+Open [`watches.json`](./watches.json) on GitHub, click the pencil (edit) icon,
+edit the `watches` list, and click **Commit changes**. Each entry has:
+
+| Field | What it means |
+| --- | --- |
+| `course` | Must match a key in the `courses` object (case-sensitive) |
+| `date` | `YYYY-MM-DD` |
+| `time_start` / `time_end` | 24-hour `HH:MM`, inclusive window |
+| `players` | Minimum spots needed |
+| `max_price` | Skip if price per player exceeds this. `0` = no limit |
+
+You can have multiple watches for the same course (e.g. different dates).
+The next scheduled run picks up the new file automatically.
 
 ## Required GitHub Secrets
 

@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>⛳ Tee Time Bot</title>
+<style>
+  :root {
+    --green: #2e7d32;
+    --green-dark: #1b5e20;
+    --bg: #f4f6f4;
+    --card: #ffffff;
+    --line: #e2e6e2;
+    --text: #1f2a22;
+    --muted: #6b756c;
+    --danger: #c62828;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.45;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 20px 16px 60px; }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; margin-bottom: 20px;
+  }
+  h1 { font-size: 22px; margin: 0; }
+  .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px; margin-bottom: 16px;
+  }
+  .watch { position: relative; }
+  .watch + .watch { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin: 10px 0 4px; }
+  input, select {
+    width: 100%; padding: 9px 10px; font-size: 15px; border: 1px solid var(--line);
+    border-radius: 8px; background: #fff; color: var(--text);
+  }
+  .row { display: flex; gap: 10px; }
+  .row > div { flex: 1; }
+  .course-name { font-weight: 700; font-size: 16px; margin-bottom: 2px; }
+  button {
+    font: inherit; font-weight: 600; border: none; border-radius: 8px;
+    padding: 11px 16px; cursor: pointer;
+  }
+  .btn-primary { background: var(--green); color: #fff; }
+  .btn-primary:hover { background: var(--green-dark); }
+  .btn-secondary { background: #eef1ee; color: var(--text); }
+  .btn-secondary:hover { background: #e2e6e2; }
+  .btn-link { background: none; color: var(--green); padding: 4px; text-decoration: underline; }
+  .btn-remove {
+    position: absolute; top: 0; right: 0; background: none; color: var(--danger);
+    font-size: 13px; padding: 4px 6px;
+  }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+  .actions button { flex: 1; min-width: 130px; }
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 7px; font-size: 13px;
+    font-weight: 700; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--line); background: #fff;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #bbb; }
+  .on .dot { background: #2e7d32; box-shadow: 0 0 0 3px rgba(46,125,50,.18); }
+  .off .dot { background: #c62828; box-shadow: 0 0 0 3px rgba(198,40,40,.15); }
+  .toast {
+    position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px);
+    background: #222; color: #fff; padding: 12px 18px; border-radius: 10px; font-size: 14px;
+    opacity: 0; pointer-events: none; transition: all .25s; max-width: 90%; text-align: center;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.err { background: var(--danger); }
+  .toast.ok { background: var(--green); }
+  .setup-step { margin: 10px 0; padding-left: 22px; position: relative; font-size: 14px; }
+  .setup-step b { color: var(--text); }
+  code { background: #eef1ee; padding: 1px 6px; border-radius: 5px; font-size: 13px; }
+  .hide { display: none !important; }
+  a { color: var(--green); }
+  .muted { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>⛳ Tee Time Bot</h1>
+      <div class="sub" id="repoSub">Codersmitty/golfteetime</div>
+    </div>
+    <div class="status-pill" id="statusPill" title="Click to turn the bot on/off">
+      <span class="dot"></span><span id="statusText">…</span>
+    </div>
+  </header>
+
+  <!-- ============ SETUP (shown when no token saved) ============ -->
+  <div class="card" id="setupCard">
+    <div class="course-name">One-time setup</div>
+    <p class="muted">To let this page save changes to your bot, paste a GitHub access token. It's stored only in this browser — you do this once.</p>
+    <div class="setup-step">1. Open <a id="tokenLink" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a></div>
+    <div class="setup-step">2. <b>Token name:</b> <code>tee-time-ui</code></div>
+    <div class="setup-step">3. <b>Repository access</b> → <b>Only select repositories</b> → pick <code>golfteetime</code></div>
+    <div class="setup-step">4. <b>Repository permissions</b> → set <b>Contents</b> = Read and write, and <b>Actions</b> = Read and write</div>
+    <div class="setup-step">5. <b>Generate token</b>, copy the <code>github_pat_…</code> string, paste below</div>
+    <label for="tokenInput">Access token</label>
+    <input id="tokenInput" type="password" placeholder="github_pat_..." autocomplete="off" />
+    <div class="actions">
+      <button class="btn-primary" id="saveTokenBtn">Save token</button>
+    </div>
+  </div>
+
+  <!-- ============ APP (shown when token present) ============ -->
+  <div id="appCard" class="hide">
+    <div class="card">
+      <div class="course-name">Watches</div>
+      <p class="muted">Each watch tells the bot to email you when a matching tee time opens.</p>
+      <div id="watchList"></div>
+      <div class="actions" style="margin-top:14px">
+        <button class="btn-secondary" id="addWatchBtn">+ Add another watch</button>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-primary" id="saveBtn">Save changes</button>
+      <button class="btn-secondary" id="runBtn">Run now</button>
+      <button class="btn-secondary" id="testBtn">Send test email</button>
+    </div>
+    <div class="actions">
+      <button class="btn-link" id="actionsLink">View bot activity →</button>
+      <button class="btn-link" id="forgetBtn" style="color:var(--muted)">Forget token on this device</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const OWNER = "Codersmitty";
+const REPO = "golfteetime";
+const BRANCH = "main";
+const PATH = "watches.json";
+const WORKFLOW = "poll.yml";
+const API = `https://api.github.com/repos/${OWNER}/${REPO}`;
+
+let token = localStorage.getItem("ttbot_token") || "";
+let fullConfig = null;   // entire watches.json (keeps _help + courses intact)
+let fileSha = null;      // needed to update the file
+let courseNames = [];
+
+document.getElementById("tokenLink").href =
+  `https://github.com/settings/personal-access-tokens/new`;
+document.getElementById("repoSub").textContent = `${OWNER}/${REPO}`;
+
+function toast(msg, kind) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast show " + (kind || "");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.className = "toast " + (kind || ""); }, 3200);
+}
+
+function headers() {
+  const h = { "Accept": "application/vnd.github+json" };
+  if (token) h["Authorization"] = "Bearer " + token;
+  return h;
+}
+
+// UTF-8 safe base64
+function b64encode(str) { return btoa(unescape(encodeURIComponent(str))); }
+function b64decode(b64) { return decodeURIComponent(escape(atob(b64.replace(/\n/g, "")))); }
+
+async function loadConfig() {
+  const res = await fetch(`${API}/contents/${PATH}?ref=${BRANCH}`, { headers: headers() });
+  if (!res.ok) throw new Error(`Couldn't read watches.json (HTTP ${res.status})`);
+  const data = await res.json();
+  fileSha = data.sha;
+  fullConfig = JSON.parse(b64decode(data.content));
+  courseNames = Object.keys(fullConfig.courses || {});
+  renderWatches(fullConfig.watches || []);
+}
+
+function watchRow(w) {
+  w = w || {};
+  const div = document.createElement("div");
+  div.className = "watch";
+  const courseOpts = courseNames.map(c =>
+    `<option value="${c}" ${c === w.course ? "selected" : ""}>${c}</option>`).join("");
+  const playerOpts = [1,2,3,4].map(n =>
+    `<option value="${n}" ${n === (w.players||4) ? "selected" : ""}>${n}</option>`).join("");
+  div.innerHTML = `
+    <button class="btn-remove" type="button">Remove</button>
+    <label>Course</label>
+    <select class="f-course">${courseOpts}</select>
+    <label>Date</label>
+    <input class="f-date" type="date" value="${w.date || ""}" />
+    <div class="row">
+      <div><label>From</label><input class="f-start" type="time" value="${w.time_start || "06:00"}" /></div>
+      <div><label>To</label><input class="f-end" type="time" value="${w.time_end || "12:00"}" /></div>
+    </div>
+    <div class="row">
+      <div><label>Players</label><select class="f-players">${playerOpts}</select></div>
+      <div><label>Max $ / player (0 = no limit)</label><input class="f-price" type="number" min="0" value="${w.max_price ?? 0}" /></div>
+    </div>`;
+  div.querySelector(".btn-remove").onclick = () => div.remove();
+  return div;
+}
+
+function renderWatches(watches) {
+  const list = document.getElementById("watchList");
+  list.innerHTML = "";
+  watches.forEach(w => list.appendChild(watchRow(w)));
+  if (!watches.length) list.appendChild(watchRow({ course: courseNames[0] }));
+}
+
+function collectWatches() {
+  const rows = [...document.querySelectorAll("#watchList .watch")];
+  const out = [];
+  for (const r of rows) {
+    const date = r.querySelector(".f-date").value;
+    const start = r.querySelector(".f-start").value;
+    const end = r.querySelector(".f-end").value;
+    if (!date) throw new Error("Every watch needs a date.");
+    if (start && end && start > end) throw new Error("A watch has 'From' later than 'To'.");
+    out.push({
+      course: r.querySelector(".f-course").value,
+      date,
+      time_start: start,
+      time_end: end,
+      players: parseInt(r.querySelector(".f-players").value, 10),
+      max_price: parseInt(r.querySelector(".f-price").value || "0", 10),
+    });
+  }
+  if (!out.length) throw new Error("Add at least one watch before saving.");
+  return out;
+}
+
+async function saveChanges() {
+  let watches;
+  try { watches = collectWatches(); }
+  catch (e) { return toast(e.message, "err"); }
+
+  fullConfig.watches = watches;
+  const body = {
+    message: "Update watches via web UI",
+    content: b64encode(JSON.stringify(fullConfig, null, 2) + "\n"),
+    sha: fileSha,
+    branch: BRANCH,
+  };
+  const btn = document.getElementById("saveBtn");
+  btn.disabled = true; btn.textContent = "Saving…";
+  try {
+    const res = await fetch(`${API}/contents/${PATH}`, {
+      method: "PUT", headers: headers(), body: JSON.stringify(body),
+    });
+    if (res.status === 409) throw new Error("File changed elsewhere — reload the page and re-edit.");
+    if (res.status === 401 || res.status === 403) throw new Error("Token rejected. Click 'Forget token' and set it up again.");
+    if (!res.ok) throw new Error(`Save failed (HTTP ${res.status})`);
+    const data = await res.json();
+    fileSha = data.content.sha;
+    toast("Saved! The bot uses it on the next run.", "ok");
+  } catch (e) {
+    toast(e.message, "err");
+  } finally {
+    btn.disabled = false; btn.textContent = "Save changes";
+  }
+}
+
+async function refreshStatus() {
+  const pill = document.getElementById("statusPill");
+  const txt = document.getElementById("statusText");
+  try {
+    const res = await fetch(`${API}/actions/workflows/${WORKFLOW}`, { headers: headers() });
+    if (!res.ok) throw 0;
+    const wf = await res.json();
+    const active = wf.state === "active";
+    pill.className = "status-pill " + (active ? "on" : "off");
+    txt.textContent = active ? "ON" : "OFF";
+    pill.dataset.active = active ? "1" : "0";
+  } catch {
+    txt.textContent = "?";
+    pill.className = "status-pill";
+  }
+}
+
+async function toggleBot() {
+  const pill = document.getElementById("statusPill");
+  const active = pill.dataset.active === "1";
+  const action = active ? "disable" : "enable";
+  if (active && !confirm("Turn the bot OFF? It will stop checking until you turn it back on.")) return;
+  try {
+    const res = await fetch(`${API}/actions/workflows/${WORKFLOW}/${action}`, {
+      method: "PUT", headers: headers(),
+    });
+    if (!res.ok) throw new Error(`Couldn't ${action} (HTTP ${res.status})`);
+    toast(active ? "Bot turned OFF" : "Bot turned ON", "ok");
+    refreshStatus();
+  } catch (e) { toast(e.message, "err"); }
+}
+
+async function dispatch(testEmail) {
+  const body = JSON.stringify({ ref: BRANCH, inputs: { test_email: testEmail ? "true" : "false" } });
+  try {
+    const res = await fetch(`${API}/actions/workflows/${WORKFLOW}/dispatches`, {
+      method: "POST", headers: headers(), body,
+    });
+    if (res.status === 401 || res.status === 403) throw new Error("Token lacks Actions permission. Re-create it with Actions: Read and write.");
+    if (!res.ok) throw new Error(`Couldn't start run (HTTP ${res.status})`);
+    toast(testEmail ? "Test email requested — check your inbox in ~1 min." : "Run started — see 'View bot activity'.", "ok");
+  } catch (e) { toast(e.message, "err"); }
+}
+
+function showApp() {
+  document.getElementById("setupCard").classList.add("hide");
+  document.getElementById("appCard").classList.remove("hide");
+  loadConfig().catch(e => toast(e.message, "err"));
+  refreshStatus();
+}
+
+// ---- wire up ----
+document.getElementById("saveTokenBtn").onclick = () => {
+  const v = document.getElementById("tokenInput").value.trim();
+  if (!v.startsWith("github_pat_") && !v.startsWith("ghp_")) {
+    return toast("That doesn't look like a GitHub token.", "err");
+  }
+  token = v;
+  localStorage.setItem("ttbot_token", token);
+  document.getElementById("tokenInput").value = "";
+  showApp();
+};
+document.getElementById("forgetBtn").onclick = () => {
+  localStorage.removeItem("ttbot_token");
+  token = "";
+  location.reload();
+};
+document.getElementById("addWatchBtn").onclick = () =>
+  document.getElementById("watchList").appendChild(watchRow({ course: courseNames[0] }));
+document.getElementById("saveBtn").onclick = saveChanges;
+document.getElementById("runBtn").onclick = () => dispatch(false);
+document.getElementById("testBtn").onclick = () => dispatch(true);
+document.getElementById("statusPill").onclick = toggleBot;
+document.getElementById("actionsLink").onclick = () =>
+  window.open(`https://github.com/${OWNER}/${REPO}/actions`, "_blank");
+
+// ---- boot ----
+if (token) showApp();
+</script>
+</body>
+</html>
