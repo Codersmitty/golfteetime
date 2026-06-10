@@ -5,8 +5,22 @@
     "Baylands Golf Links": {
       "platform": "golfnow",
       "facility_id": 9259,
-      "lat": 37.44936,
-      "lon": -122.12526
+      "slug": "baylands-golf-links"
+    },
+    "Sharp Park": {
+      "platform": "golfnow",
+      "facility_id": 9722,
+      "slug": "sharp-park-golf-course"
+    },
+    "Shoreline Golf Links": {
+      "platform": "golfnow",
+      "facility_id": 6012,
+      "slug": "shoreline-golf-links"
+    },
+    "Crystal Springs": {
+      "platform": "golfnow",
+      "facility_id": 130,
+      "slug": "crystal-springs-golf-course"
     },
     "Poppy Ridge": {
       "platform": "foreup",

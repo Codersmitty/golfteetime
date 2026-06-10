@@ -1,8 +1,11 @@
 # golfteetime
 
-Polls Baylands Golf Links (via GolfNow) and Poppy Ridge (via ForeUp) every
-5 minutes for available tee times matching the criteria in
-[`watches.json`](./watches.json), and emails when a new slot opens.
+Polls public golf courses every 5 minutes for available tee times matching the
+criteria in [`watches.json`](./watches.json), and emails when a new slot opens.
+
+Supported courses (selectable in the control panel):
+Baylands Golf Links, Sharp Park, Shoreline Golf Links, Crystal Springs (all via
+GolfNow), and Poppy Ridge (via ForeUp).
 
 ## Control panel (web UI)
 

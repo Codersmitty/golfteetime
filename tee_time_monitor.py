@@ -146,11 +146,11 @@ def _hhmm_to_halfhours(hhmm):
 
 
 def check_golfnow(watch):
-    """Drive GolfNow's SPA via Playwright and capture the tee-time JSON XHR.
+    """Drive GolfNow's SPA via Playwright, force the search date, capture the JSON.
 
-    GolfNow's `/api/tee-times/tee-time-search-results` POST endpoint is gated
-    by browser-side session/CSRF state and refuses bare HTTP calls. Loading
-    the search page and intercepting the response is the most reliable path.
+    GolfNow ignores the ?Date= URL param on first load, so we intercept the
+    POST to /api/tee-times/tee-time-search-results and rewrite the request
+    body's date/players before it goes out, then read the response.
     """
     try:
         from playwright.sync_api import sync_playwright
@@ -159,15 +159,27 @@ def check_golfnow(watch):
         return []
 
     date_obj = datetime.strptime(watch["date"], "%Y-%m-%d")
-    slug = watch["course"].lower().replace(" ", "-")
+    gn_date = date_obj.strftime("%b %d %Y")  # GolfNow body format, e.g. "May 20 2026"
+    slug = watch.get("slug") or watch["course"].lower().replace(" ", "-")
     page_url = (
         f"https://www.golfnow.com/tee-times/facility/{watch['facility_id']}-{slug}/search"
-        f"?Date={date_obj.strftime('%Y-%m-%d')}"
-        f"&Players={watch['players']}"
-        f"&Holes=18"
+        f"?Date={date_obj.strftime('%Y-%m-%d')}&Players={watch['players']}&Holes=18"
     )
 
     captured = []
+
+    def handle_route(route):
+        req = route.request
+        try:
+            body = json.loads(req.post_data or "{}")
+            body["date"] = gn_date
+            body["players"] = watch["players"]
+            body["pageSize"] = 1000
+            body["timeMin"] = 0
+            body["timeMax"] = 48
+            route.continue_(post_data=json.dumps(body))
+        except Exception:
+            route.continue_()
 
     def on_response(resp):
         if "tee-time-search-results" in resp.url and resp.status == 200:
@@ -182,10 +194,11 @@ def check_golfnow(watch):
             user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
         )
         page = ctx.new_page()
+        page.route("**/tee-time-search-results", handle_route)
         page.on("response", on_response)
         try:
             page.goto(page_url, timeout=45000, wait_until="domcontentloaded")
-            page.wait_for_timeout(8000)
+            page.wait_for_timeout(12000)
         except Exception as e:
             print(f"  [GolfNow] navigation error: {e}")
         browser.close()
@@ -194,48 +207,36 @@ def check_golfnow(watch):
         print("  [GolfNow] no search-results response captured")
         return []
 
-    payload = captured[-1]
-    tee_times = (payload.get("ttResults") or {}).get("teeTimes") or payload.get("results") or []
+    tee_times = (captured[-1].get("ttResults") or {}).get("teeTimes") or []
 
     slots = []
     for tt in tee_times:
         if tt.get("facilityId") and tt["facilityId"] != watch["facility_id"]:
             continue
-        rates = tt.get("rates") or []
-        if not rates:
-            continue
-        rate = rates[0]
-        raw_time = rate.get("teeTime") or tt.get("teeOffTime") or tt.get("date")
-        if not raw_time:
+        time_info = tt.get("time") or {}
+        iso = time_info.get("date", "")
+        if iso[:10] != watch["date"]:
             continue
         try:
-            if isinstance(raw_time, str) and "T" in raw_time:
-                tee_dt = datetime.fromisoformat(raw_time.split(".")[0].replace("Z", ""))
-            elif isinstance(raw_time, str):
-                tee_dt = datetime.strptime(raw_time, "%Y-%m-%d %H:%M:%S")
-            else:
-                continue
-        except ValueError:
-            continue
-        if tee_dt.date() != date_obj.date():
+            tee_dt = datetime.strptime(
+                f"{time_info['formatted']} {time_info['formattedTimeMeridian']}",
+                "%I:%M %p",
+            )
+        except (KeyError, ValueError):
             continue
         hhmm = tee_dt.strftime("%H:%M")
         if not time_in_window(hhmm, watch["time_start"], watch["time_end"]):
             continue
 
-        avail = int(rate.get("playerCount", tt.get("maxPlayers", 0)) or 0)
-        if avail and avail < watch["players"]:
-            continue
-
-        price_obj = rate.get("greenFeeRate") or rate.get("greenFee") or {}
-        price = float(price_obj.get("value", 0) or 0)
+        rate_obj = tt.get("minTeeTimeRate") or tt.get("displayRate") or {}
+        price = float(rate_obj.get("value", 0) or 0)
         if watch["max_price"] and price > watch["max_price"]:
             continue
 
         slots.append({
             "time": hhmm,
             "price": price,
-            "available": avail or watch["players"],
+            "available": watch["players"],
             "url": page_url,
         })
     return slots
