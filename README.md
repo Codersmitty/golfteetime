@@ -4,8 +4,8 @@ Polls public golf courses every 5 minutes for available tee times matching the
 criteria in [`watches.json`](./watches.json), and emails when a new slot opens.
 
 Supported courses (selectable in the control panel):
-Baylands Golf Links, Sharp Park, Shoreline Golf Links, Crystal Springs (all via
-GolfNow), and Poppy Ridge (via ForeUp).
+Baylands Golf Links, Sharp Park, Shoreline Golf Links, Crystal Springs (GolfNow),
+Poppy Ridge (ForeUp), and Hobble Creek, Fox Hollow, Cedar Hills (MemberSports).
 
 ## Control panel (web UI)
 

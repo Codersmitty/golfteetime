@@ -138,6 +138,68 @@ def check_foreup(watch):
     return slots
 
 
+# --- MemberSports (Hobble Creek, Fox Hollow, Cedar Hills, ...) ----------------
+
+# Public guest key embedded in the MemberSports web app. If MemberSports rotates
+# it, re-capture it from a request on app.membersports.com and update here.
+MEMBERSPORTS_API_KEY = "A9814038-9E19-4683-B171-5A06B39147FC"
+MEMBERSPORTS_URL = "https://api.membersports.com/api/v1/golfclubs/onlineBookingTeeTimes"
+
+
+def check_membersports(watch):
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "x-api-key": MEMBERSPORTS_API_KEY,
+        "Authorization": "Bearer null",
+        "Origin": "https://app.membersports.com",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+    }
+    body = {
+        "configurationTypeId": 0,
+        "date": watch["date"],
+        "golfClubGroupId": watch.get("group_id", 0),
+        "golfClubId": watch["club_id"],
+        "golfCourseId": watch["ms_course_id"],
+        "groupSheetTypeId": 0,
+    }
+    resp = requests.post(MEMBERSPORTS_URL, json=body, headers=headers, timeout=20)
+    resp.raise_for_status()
+    data = resp.json()
+    if not isinstance(data, list):
+        print(f"  [MemberSports] unexpected response: {data!r}")
+        return []
+
+    book_url = (
+        f"https://app.membersports.com/tee-times/{watch['club_id']}"
+        f"/{watch['ms_course_id']}/0/{watch.get('group_id', 0)}/0"
+    )
+    slots = []
+    for tt in data:
+        minutes = tt.get("teeTime")
+        if not tt.get("items") or minutes is None:
+            continue
+        item = tt["items"][0]
+        if item.get("bookingNotAllowed"):
+            continue
+        avail = int(item.get("playerCount", 0) or 0)
+        if avail < watch["players"]:
+            continue
+        hhmm = f"{minutes // 60:02d}:{minutes % 60:02d}"
+        if not time_in_window(hhmm, watch["time_start"], watch["time_end"]):
+            continue
+        price = float(item.get("price", 0) or 0)
+        if watch["max_price"] and price > watch["max_price"]:
+            continue
+        slots.append({
+            "time": hhmm,
+            "price": price,
+            "available": avail,
+            "url": book_url,
+        })
+    return slots
+
+
 # --- Baylands / GolfNow ------------------------------------------------------
 
 def _hhmm_to_halfhours(hhmm):
@@ -256,6 +318,8 @@ def check_all():
                 slots = check_foreup(watch)
             elif watch["platform"] == "golfnow":
                 slots = check_golfnow(watch)
+            elif watch["platform"] == "membersports":
+                slots = check_membersports(watch)
             else:
                 slots = []
         except Exception as e:

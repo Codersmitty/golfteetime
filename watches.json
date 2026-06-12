@@ -27,6 +27,24 @@
       "course_id": 20938,
       "schedule_id": 11715,
       "booking_class": 50613
+    },
+    "Hobble Creek": {
+      "platform": "membersports",
+      "club_id": 15404,
+      "ms_course_id": 18918,
+      "group_id": 0
+    },
+    "Fox Hollow": {
+      "platform": "membersports",
+      "club_id": 3703,
+      "ms_course_id": 20589,
+      "group_id": 7
+    },
+    "Cedar Hills": {
+      "platform": "membersports",
+      "club_id": 15381,
+      "ms_course_id": 18891,
+      "group_id": 0
     }
   },
 
