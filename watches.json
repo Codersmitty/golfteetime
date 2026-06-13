@@ -45,6 +45,18 @@
       "club_id": 15381,
       "ms_course_id": 18891,
       "group_id": 0
+    },
+    "Sleepy Ridge": {
+      "platform": "foreup",
+      "course_id": 19396,
+      "schedule_id": 1726,
+      "booking_class": 3412
+    },
+    "Gladstan": {
+      "platform": "foreup",
+      "course_id": 18922,
+      "schedule_id": 636,
+      "booking_class": 6220
     }
   },
 
