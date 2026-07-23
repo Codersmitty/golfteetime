@@ -1,6 +1,5 @@
 {
   "_help": "Edit the 'watches' list below to change what's monitored. Don't touch 'courses' unless you're adding a new course (you'd need to know its booking IDs).",
-
   "courses": {
     "Baylands Golf Links": {
       "platform": "golfnow",
@@ -59,22 +58,37 @@
       "booking_class": 6220
     }
   },
-
   "watches": [
     {
       "course": "Baylands Golf Links",
-      "date": "2026-05-16",
+      "date": "2026-07-28",
       "time_start": "06:00",
-      "time_end": "12:00",
-      "players": 4,
-      "max_price": 120
+      "time_end": "10:00",
+      "players": 2,
+      "max_price": 0
     },
     {
       "course": "Poppy Ridge",
-      "date": "2026-05-16",
+      "date": "2026-07-28",
       "time_start": "06:00",
-      "time_end": "12:00",
-      "players": 4,
+      "time_end": "10:00",
+      "players": 2,
+      "max_price": 0
+    },
+    {
+      "course": "Poppy Ridge",
+      "date": "2026-07-29",
+      "time_start": "06:00",
+      "time_end": "10:00",
+      "players": 2,
+      "max_price": 0
+    },
+    {
+      "course": "Poppy Ridge",
+      "date": "2026-07-30",
+      "time_start": "06:00",
+      "time_end": "10:00",
+      "players": 2,
       "max_price": 0
     }
   ]
